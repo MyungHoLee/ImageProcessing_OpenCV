@@ -1,9 +1,11 @@
 #include <opencv/cv.h>
 #include <opencv/highgui.h>
 
+#define GAMMA_CONSTANT 0.85
+
 /*
 	화소 점 처리
-	영상 반전
+	감마 보정
 */
 int main()
 {
@@ -17,8 +19,19 @@ int main()
 	for (i = 0; i < inputImage->height; i++) {
 		for (j = 0; j < inputImage->width; j++) {
 			pixelValue = cvGet2D(inputImage, i, j);
-			temp.val[0] = 255 - pixelValue.val[0];
-			cvSet2D(outputImage, i, j, temp);
+
+			temp.val[0] = pow(pixelValue.val[0], 1 / GAMMA_CONSTANT);
+			if (temp.val[0] < 0) {
+				temp.val[0] = 0;
+				cvSet2D(outputImage, i, j, temp);
+			}
+			else if (temp.val[0] > 255) {
+				temp.val[0] = 255;
+				cvSet2D(outputImage, i, j, temp);
+			}
+			else {
+				cvSet2D(outputImage, i, j, temp);
+			}
 		}
 	}
 
