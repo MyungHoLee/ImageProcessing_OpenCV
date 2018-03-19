@@ -1,11 +1,11 @@
 #include <opencv/cv.h>
 #include <opencv/highgui.h>
 
-#define GAMMA_CONSTANT 0.85
+#define BINARY_THRESHOLD 130
 
 /*
 	화소 점 처리
-	감마 보정
+	이진화
 */
 int main()
 {
@@ -20,16 +20,12 @@ int main()
 		for (j = 0; j < inputImage->width; j++) {
 			pixelValue = cvGet2D(inputImage, i, j);
 
-			temp.val[0] = pow(pixelValue.val[0], 1 / GAMMA_CONSTANT);
-			if (temp.val[0] < 0) {
-				temp.val[0] = 0;
-				cvSet2D(outputImage, i, j, temp);
-			}
-			else if (temp.val[0] > 255) {
+			if (pixelValue.val[0] >= BINARY_THRESHOLD) {
 				temp.val[0] = 255;
 				cvSet2D(outputImage, i, j, temp);
 			}
 			else {
+				temp.val[0] = 0;
 				cvSet2D(outputImage, i, j, temp);
 			}
 		}
