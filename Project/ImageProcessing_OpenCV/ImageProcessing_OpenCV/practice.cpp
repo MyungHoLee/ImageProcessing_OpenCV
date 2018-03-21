@@ -1,8 +1,7 @@
 #include <opencv/cv.h>
 #include <opencv/highgui.h>
 
-#define STRESS_START_POINT 100
-#define STRESS_END_POINT 150
+#define BINARY_THRESHOLD 130
 
 /*
 	화소 점 처리
@@ -21,12 +20,13 @@ int main()
 		for (j = 0; j < inputImage->width; j++) {
 			pixelValue = cvGet2D(inputImage, i, j);
 
-			if (pixelValue.val[0] >= STRESS_START_POINT && pixelValue.val[0] <= STRESS_END_POINT) {
+			if (pixelValue.val[0] >= BINARY_THRESHOLD) {
 				temp.val[0] = 255;
 				cvSet2D(outputImage, i, j, temp);
 			}
 			else {
-				cvSet2D(outputImage, i, j, pixelValue);
+				temp.val[0] = 0;
+				cvSet2D(outputImage, i, j, temp);
 			}
 		}
 	}
