@@ -5,44 +5,58 @@
 #define HIGH 255
 #define HISTOGRAM_SIZE 256
 
-#define ENDIN_LOW 30
-#define ENDIN_HIGH 225
-
 /*
-* 히스토그램을 이용한 화소 점처리
+* 히스토그램 평활화
+단계정도는 알아두기
+어떤 수식이 어떤 수식인지 알아두기
 */
 void Show_histogram(IplImage* img,const char* imgWindowNmae,const char* histogramWindowName);
 
 int main()
 {
-	int i, j;
+	int i, j, value;
 
 	IplImage* inputImage = cvLoadImage("lena.jpg", CV_LOAD_IMAGE_GRAYSCALE); // cvLoadImage("주소", 컬러로 로드): 이미지 불러오는 함수
-	IplImage* endin_Image = cvCreateImage(cvGetSize(inputImage), inputImage->depth, inputImage->nChannels);
+	IplImage* equalImage = cvCreateImage(cvGetSize(inputImage), inputImage->depth, inputImage->nChannels);
 
 	CvScalar temp;
 
+	double HIST[HISTOGRAM_SIZE];
+	double sum_of_HIST[HISTOGRAM_SIZE];
+	double SUM = 0.0;
+
+	// 초기화
+	for (i = 0; i < HISTOGRAM_SIZE; i++) HIST[i] = LOW;
+
+	// 1단계 빈도수
 	for (i = 0; i < inputImage->height; i++) {
 		for (j = 0; j < inputImage->width; j++) {
 			temp = cvGet2D(inputImage, i, j);
-			if (temp.val[0] >= ENDIN_HIGH) {
-				cvSet2D(endin_Image, i, j, cvScalar(255));
-			}
-			else if (temp.val[0] <= ENDIN_LOW) {
-				cvSet2D(endin_Image, i, j, cvScalar(0));
-			}
-			else {
-				cvSet2D(endin_Image, i, j, cvScalar((temp.val[0] - ENDIN_LOW) * HIGH / (ENDIN_HIGH - ENDIN_LOW)));
-			}
+			value = (int)temp.val[0];
+			HIST[value]++;
+		}
+	}
+
+	// 2단계 누적합
+	for (i = 0; i < HISTOGRAM_SIZE; i++) {
+		SUM = SUM + HIST[i];
+		sum_of_HIST[i] = SUM;
+	}
+
+	// 3단계 정규화 누적합
+	for (i = 0; i < inputImage->height; i++) {
+		for (j = 0; j < inputImage->width; j++) {
+			temp = cvGet2D(inputImage, i, j);
+			cvSet2D(equalImage, i, j, cvScalar(sum_of_HIST[(int)temp.val[0]] * HIGH / (inputImage->height * inputImage->width)));
 		}
 	}
 
 	Show_histogram(inputImage, "input image", "input histogram");
-	Show_histogram(endin_Image, "EndIn image", "EndIn histogram");
+	Show_histogram(equalImage, "Equal image", "Equal histogram");
 
 	cvWaitKey(); // 이 함수를 안넣으면 이미지가 불러와졌다가 바로 꺼짐(괄호 안에 특수한 키를 넣으면 그 키를 눌렀을 때 꺼짐, 비어있으면 아무키나 눌렀을 때 꺼진다.)
 	cvDestroyAllWindows();
-	cvReleaseImage(&inputImage); // 이미지 해제
+	cvReleaseImage(&equalImage); // 이미지 해제
 	cvReleaseImage(&inputImage);
 
 	return 0;
