@@ -2,8 +2,7 @@
 #include <opencv/highgui.h>
 
 /*
-* 엠보싱 처리
-* 마스크 크기를 바꾸고 tempImage의 크기가 몇으로 바뀌는지 시험 출제 가능성 높음
+	블러링 처리
 */
 IplImage* ConvolutionProcess(IplImage* inputImage, double Mask[3][3]);
 
@@ -12,9 +11,9 @@ int main()
 	IplImage* inputImage = cvLoadImage("lena.jpg", CV_LOAD_IMAGE_GRAYSCALE); // cvLoadImage("주소", 컬러로 로드): 이미지 불러오는 함수
 	IplImage* ResultImage = NULL;
 
-	double EmboMask[3][3] = { {-1., 0., 0.}, {0.,0.,0.}, {0.,0.,1.} };
+	double BlurringMask[3][3] = { {1 / 9.,1 / 9., 1 / 9.},{ 1 / 9.,1 / 9., 1 / 9. },{ 1 / 9.,1 / 9., 1 / 9. } };
 
-	ResultImage = ConvolutionProcess(inputImage, EmboMask);
+	ResultImage = ConvolutionProcess(inputImage, BlurringMask);
 
 	cvShowImage("input Image", inputImage);
 	cvShowImage("Result Image", ResultImage);
@@ -51,7 +50,6 @@ IplImage* ConvolutionProcess(IplImage* inputImage, double Mask[3][3]) {
 				for (m = 0; m < 3; m++) { // 마스크와 연산하면서 Sum에 누적
 					tempScalar = cvGet2D(tempinputImage, i + n, j + m);
 					Sum += Mask[n][m] + tempScalar.val[0];
-					printf("%lf\n", Sum);
 				}
 			}
 			cvSet2D(outputImage, i, j, cvScalar(Sum + 128)); // 결과값을 아웃풋 이미지에 넣음
