@@ -9,18 +9,23 @@ IplImage* ConvolutionProcess(IplImage* inputImage, double Mask[3][3]);
 int main()
 {
 	IplImage* inputImage = cvLoadImage("lena.jpg", CV_LOAD_IMAGE_GRAYSCALE); // cvLoadImage("주소", 컬러로 로드): 이미지 불러오는 함수
-	IplImage* ResultImage = NULL;
+	IplImage* ResultImage_1 = NULL;
+	IplImage* ResultImage_2 = NULL;
 
-	double GaussianMask[3][3] = { {1 / 16.,1 / 8.,1 / 16.},{1 / 8.,1 / 4.,1 / 8.},{1 / 16.,1 / 8.,1 / 16.} };
+	double SharpeningMask_1[3][3] = { {-1., -1., -1.}, {-1.,9.,-1.},{-1.,-1.,-1.} };
+	double SharpeningMask_2[3][3] = { {0., -1., 0.}, {-1., 5., -1.}, {0., -1., 0.} };
 
-	ResultImage = ConvolutionProcess(inputImage, GaussianMask);
+	ResultImage_1 = ConvolutionProcess(inputImage, SharpeningMask_1);
+	ResultImage_2 = ConvolutionProcess(inputImage, SharpeningMask_2);
 
 	cvShowImage("input Image", inputImage);
-	cvShowImage("Result Image", ResultImage);
+	cvShowImage("Result Image 1", ResultImage_1);
+	cvShowImage("Result Image 2", ResultImage_2);
 
 	cvWaitKey(); // 이 함수를 안넣으면 이미지가 불러와졌다가 바로 꺼짐(괄호 안에 특수한 키를 넣으면 그 키를 눌렀을 때 꺼짐, 비어있으면 아무키나 눌렀을 때 꺼진다.)
 	cvDestroyAllWindows();
-	cvReleaseImage(&ResultImage);
+	cvReleaseImage(&ResultImage_1);
+	cvReleaseImage(&ResultImage_2);
 	cvReleaseImage(&inputImage);
 
 	return 0;
