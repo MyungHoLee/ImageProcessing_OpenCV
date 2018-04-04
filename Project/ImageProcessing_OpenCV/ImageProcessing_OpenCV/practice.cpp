@@ -54,10 +54,10 @@ IplImage* ConvolutionProcess(IplImage* inputImage, double Mask[3][3]) {
 			for (n = 0; n < 3; n++) {
 				for (m = 0; m < 3; m++) { // 마스크와 연산하면서 Sum에 누적
 					tempScalar = cvGet2D(tempinputImage, i + n, j + m);
-					Sum += Mask[n][m] + tempScalar.val[0];
+					Sum += Mask[n][m] * tempScalar.val[0];
 				}
 			}
-			cvSet2D(outputImage, i, j, cvScalar(Sum + 128)); // 결과값을 아웃풋 이미지에 넣음
+			cvSet2D(outputImage, i, j, cvScalar(Sum)); // 결과값을 아웃풋 이미지에 넣음
 			Sum = 0.0;
 		}
 	}
