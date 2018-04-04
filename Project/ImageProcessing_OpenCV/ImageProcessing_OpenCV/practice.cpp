@@ -2,7 +2,7 @@
 #include <opencv/highgui.h>
 
 /*
-	블러링 처리
+	가우시안 필터링 처리
 */
 IplImage* ConvolutionProcess(IplImage* inputImage, double Mask[3][3]);
 
@@ -11,9 +11,9 @@ int main()
 	IplImage* inputImage = cvLoadImage("lena.jpg", CV_LOAD_IMAGE_GRAYSCALE); // cvLoadImage("주소", 컬러로 로드): 이미지 불러오는 함수
 	IplImage* ResultImage = NULL;
 
-	double BlurringMask[3][3] = { {1 / 9.,1 / 9., 1 / 9.},{ 1 / 9.,1 / 9., 1 / 9. },{ 1 / 9.,1 / 9., 1 / 9. } };
+	double GaussianMask[3][3] = { {1 / 16.,1 / 8.,1 / 16.},{1 / 8.,1 / 4.,1 / 8.},{1 / 16.,1 / 8.,1 / 16.} };
 
-	ResultImage = ConvolutionProcess(inputImage, BlurringMask);
+	ResultImage = ConvolutionProcess(inputImage, GaussianMask);
 
 	cvShowImage("input Image", inputImage);
 	cvShowImage("Result Image", ResultImage);
