@@ -3,8 +3,6 @@
 
 #define SUB_SAMPLING_RATE 2 // 축소 비율
 
-void Swap(double *a, double *b); // 데이터 교환
-void BubbleSort(double *A, int MAX); // 데이터 정렬
 /*
 * 미디언 표현
 */
@@ -12,7 +10,7 @@ void BubbleSort(double *A, int MAX); // 데이터 정렬
 int main()
 {
 	int i, j, n, m, k, index = 0;
-	double *Mask, *OutputValue;
+	double *Mask, *OutputValue, Sum = 0.0;
 	CvScalar tempScalar;
 
 	Mask = new double[SUB_SAMPLING_RATE * SUB_SAMPLING_RATE]; // 마스크 크기
@@ -40,8 +38,11 @@ int main()
 					Mask[n*SUB_SAMPLING_RATE + m] = tempScalar.val[0]; // 마스크 범위의 화소값들 배열을 만듬
 				}
 			}
-			BubbleSort(Mask, SUB_SAMPLING_RATE * SUB_SAMPLING_RATE); // 마스크 배열 값들 정렬
-			OutputValue[index++] = Mask[(int)(SUB_SAMPLING_RATE * SUB_SAMPLING_RATE / 2)]; // OutputValue 행렬에 중간값들 행렬
+			for (k = 0; k < SUB_SAMPLING_RATE + SUB_SAMPLING_RATE; k++) { // 배열 값들 합함
+				Sum += Mask[k];
+			}
+			OutputValue[index++] = (Sum / (SUB_SAMPLING_RATE * SUB_SAMPLING_RATE)); // Sum값 마스크
+			Sum = 0.0;
 		}
 	}
 
