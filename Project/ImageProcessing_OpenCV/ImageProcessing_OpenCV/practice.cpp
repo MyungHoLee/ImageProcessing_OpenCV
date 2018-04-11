@@ -1,26 +1,32 @@
 #include <opencv/cv.h>
 #include <opencv/highgui.h>
 
+#define ZOOM_RATE 2 // 영상 확대 비율
+
 /*
-* 가우시안 필터링 처리
+* 가장 인접한 이웃 화소 보간법
 */
-IplImage* ConvolutionProcess(IplImage* inputImage, double Mask[3][3]);
 
 int main()
 {
+	int i, j;
+
 	IplImage* inputImage = cvLoadImage("lena.jpg", CV_LOAD_IMAGE_GRAYSCALE); // cvLoadImage("주소", 컬러로 로드): 이미지 불러오는 함수
-	IplImage* ResultImage = NULL;
+	IplImage* outputImage = cvCreateImage(cvSize(inputImage->width * ZOOM_RATE, inputImage->height * ZOOM_RATE), 8, 1);
 
-	double GaussianMask[3][3] = { {1 / 16.,1 / 8., 1 / 16.},{ 1 / 8.,1 / 4., 1 / 8.},{ 1 / 16.,1 / 8., 1 / 16. } };
-
-	ResultImage = ConvolutionProcess(inputImage, GaussianMask);
+	for (i = 0; i < outputImage->height; i++) {
+		for (j = 0; j < outputImage->width; j++) {
+			cvSet2D(outputImage, i, j, cvGet2D(inputImage, i / ZOOM_RATE, j / ZOOM_RATE));
+			// 가장 인접환 화소 입력
+		}
+	}
 
 	cvShowImage("input Image", inputImage);
-	cvShowImage("Result Image", ResultImage);
+	cvShowImage("Output Image", outputImage);
 
 	cvWaitKey(); // 이 함수를 안넣으면 이미지가 불러와졌다가 바로 꺼짐(괄호 안에 특수한 키를 넣으면 그 키를 눌렀을 때 꺼짐, 비어있으면 아무키나 눌렀을 때 꺼진다.)
 	cvDestroyAllWindows();
-	cvReleaseImage(&ResultImage);
+	cvReleaseImage(&outputImage);
 	cvReleaseImage(&inputImage);
 
 	return 0;
