@@ -6,7 +6,7 @@
 void Swap(double *a, double *b); // 데이터 교환
 void BubbleSort(double *A, int MAX); // 데이터 정렬
 /*
-* 양선형 화소 보간법
+* 미디언 표현
 */
 
 int main()
