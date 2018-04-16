@@ -2,7 +2,7 @@
 #include <opencv/highgui.h>
 
 #define PI 3.141592
-#define DEGREE 45 // 회전 각
+#define DEGREE 300 // 회전 각
 
 /*
 * 회전
@@ -11,28 +11,34 @@
 int main()
 {
 	IplImage *inputImage = cvLoadImage("lena.jpg", CV_LOAD_IMAGE_GRAYSCALE);
-	IplImage *outputImage = cvCreateImage(cvSize(inputImage->width, inputImage->height),
-		inputImage->depth, inputImage->nChannels);
+	IplImage *outputImage;
 
-	int i, j, Center_y, Center_x, source_y, source_x;
-	double Radian, cosR, sinR;
+	int i, j, in_Center_y, in_Center_x, source_y, source_x, out_w, out_h, out_Center_y, out_Center_x;
+	double Radian, cosR, sinR, Radian90;
 	CvScalar Value;
 
 	Radian = (double)DEGREE * PI / 180.0; // degree 값을 radian으로 변경
+	Radian90 = (double)90 * PI / 180.0;
+	//Out put Image size
+	out_w = abs(inputImage->height * cos(Radian90 - Radian)) + abs(inputImage->width * cos(Radian));
+	out_h = abs(inputImage->height * cos(Radian)) + abs(inputImage->width * cos(Radian90 - Radian));
+
+	outputImage = cvCreateImage(cvSize(out_w, out_h), inputImage->depth, inputImage->nChannels);
 
 	cosR = cos(Radian);
 	sinR = sin(Radian);
 
 	//영상의 중심좌표
-	Center_y = inputImage->height / 2;
-	Center_x = inputImage->width / 2;
+	out_Center_y = out_h / 2;
+	out_Center_x = out_w / 2;
+	in_Center_y = inputImage->height / 2;
+	in_Center_x = inputImage->width / 2;
 
-	for (i = 0; i < inputImage->height; i++) {
-		for (j = 0; j < inputImage->width; j++) {
-			//회전 변환 행렬을 이용하여 새 좌표값 계산
-			source_x = (int)((j - Center_x)*cosR + (i - Center_y)*sinR + Center_x);
-			source_y = (int)(-(j - Center_x)*sinR + (i - Center_y)*cosR + Center_y);
-
+	for (i = 0; i < out_h; i++) {
+		for (j = 0; j < out_w; j++) {
+			source_x = (int)((j - out_Center_x)*cosR + (i - out_Center_y)*sinR + in_Center_x);
+			source_y = (int)(-(j - out_Center_x)*sinR + (i - out_Center_y)*cosR + in_Center_y);
+			
 			//좌표가 영상범위 넘어갔을때 0 처리
 			if (source_x < 0 || source_y < 0 || source_y >= inputImage->height || source_x >= inputImage->width)
 				Value.val[0] = 0;
