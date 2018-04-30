@@ -4,35 +4,49 @@
 int main()
 {
 	int i, j;
-	CvScalar inputValue1, inputValue2, outputValue;
+	CvScalar tempValue01, tempValue02, resultValue;
+	bool isBackGroung = false;
 
-	IplImage *inputImage1 = cvLoadImage("lena.jpg", CV_LOAD_IMAGE_GRAYSCALE);
-	IplImage *inputImage2 = cvLoadImage("Penguin.jpg", CV_LOAD_IMAGE_GRAYSCALE);
-	IplImage *outputImage = cvCreateImage(cvSize(inputImage1->width, inputImage1->height),8,1);
+	CvCapture *capture = cvCreateFileCapture("test.avi");// 동영상 연결
+	IplImage *frame;
 
-	for (i = 0; i < inputImage1->height; i++) {
-		for (j = 0; j < inputImage1->width; j++) {
-			//각 이미지에서 같은 좌표 값을 불러옴
-			inputValue1 = cvGet2D(inputImage1, i, j);
-			inputValue2 = cvGet2D(inputImage2, i, j);
-			//각각 1/2씩 합
-			outputValue.val[0] = inputValue1.val[0] / 2 + inputValue2.val[0] / 2;
+	IplImage *grayFrame = cvCreateImage(cvSize(320, 240), 8, 1);
+	IplImage *backGroundImage = cvCreateImage(cvGetSize(grayFrame), 8, 1);
+	IplImage *resultImage = cvCreateImage(cvGetSize(grayFrame), 8, 1);
 
-			cvSet2D(outputImage, i, j, outputValue);
+	while (1) {
+		frame = cvQueryFrame(capture); // 동영상의 프레임을 복사
+		if (!frame) break;
+		cvShowImage("Source", frame);
+
+		cvCvtColor(frame, grayFrame, CV_RGB2GRAY);// 컬러영상을 흑백으로 변환
+		cvShowImage("Gray Scale", grayFrame);
+
+		if (isBackGroung != true) {
+			cvCopy(grayFrame, backGroundImage); // 배경영상을 추출.
+			isBackGroung = true;
 		}
+		cvShowImage("Back Ground Image", backGroundImage);
+
+		for (i = 0; i < grayFrame->height; i++) {
+			for (j = 0; j < grayFrame ->width; j++) {
+				tempValue01 = cvGet2D(grayFrame, i, j);
+				tempValue02 = cvGet2D(backGroundImage, i, j);
+				resultValue.val[0] = abs(tempValue01.val[0] - tempValue02.val[0]);
+				cvSet2D(resultImage, i, j, resultValue);
+			}
+		}
+		cvShowImage("Result Image", resultImage);
+
+		if (cvWaitKey(30) == 27) break; // 30ms동안 프로그램 정지. ESC(27)을 누르지 않으면 루프 반복
 	}
 
 
-	cvShowImage("Input Image1", inputImage1);
-	cvShowImage("Input Image2", inputImage2);
-	cvShowImage("Output Image", outputImage);
-
-	cvWaitKey(); // 이 함수를 안넣으면 이미지가 불러와졌다가 바로 꺼짐(괄호 안에 특수한 키를 넣으면 그 키를 눌렀을 때 꺼짐, 비어있으면 아무키나 눌렀을 때 꺼진다.)
-	
+	cvReleaseCapture(&capture);
 	cvDestroyAllWindows();
-	cvReleaseImage(&inputImage1);
-	cvReleaseImage(&inputImage2);
-	cvReleaseImage(&outputImage);
+	cvReleaseImage(&grayFrame);
+	cvReleaseImage(&backGroundImage);
+	cvReleaseImage(&resultImage);
 	
 	return 0;
 }
