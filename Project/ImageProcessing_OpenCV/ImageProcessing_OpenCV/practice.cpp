@@ -1,14 +1,21 @@
 #include <opencv/cv.h>
 #include <opencv/highgui.h>
 
+#define MASKSIZE 3
+
+static int compare(const void *arg1, const void *arg2);
+
 int main()
 {
 	int i, j, n, m;
+	int steps = MASKSIZE - 1;
 	CvScalar tempValue;
 
-	double filter[3][3] = { {-1. / 9.,-1. / 9., -1. / 9.}, { -1. / 9., 8. / 9.,-1. / 9. }, { -1. / 9., -1. / 9., -1. / 9.} };
+	//Median Buffer
+	double *filter = (double*)malloc(sizeof(double)*MASKSIZE * MASKSIZE);
+
 	IplImage *inputImage = cvLoadImage("lena.jpg", CV_LOAD_IMAGE_GRAYSCALE);
-	IplImage *tempImage = cvCreateImage(cvSize(inputImage->width + 2, inputImage->height + 2), 8, 1);
+	IplImage *tempImage = cvCreateImage(cvSize(inputImage->width + steps, inputImage->height + steps), 8, 1);
 	IplImage *outputImage = cvCreateImage(cvGetSize(inputImage), 8, 1);
 
 	//Create padding 패딩만들기
@@ -21,12 +28,13 @@ int main()
 	//calculate
 	for (i = 0; i < inputImage->height; i++) {
 		for (j = 0; j < inputImage->width; j++) {
-			tempValue.val[0] = 0.;
-			for (n = 0; n < 3; n++) {
-				for (m = 0; m < 3; m++) {
-					tempValue.val[0] += cvGet2D(tempImage, i + n, j + m).val[0] * filter[n][m];
+			for (n = 0; n < MASKSIZE; n++) {
+				for (m = 0; m < MASKSIZE; m++) {
+					filter[n*MASKSIZE + m] = cvGet2D(tempImage, i + n, j + m).val[0];
 				}
 			}
+			qsort(filter, MASKSIZE * MASKSIZE, sizeof(filter[0]), compare);
+			tempValue.val[0] = filter[(int)(MASKSIZE *MASKSIZE) / 2];
 			cvSet2D(outputImage, i, j, tempValue);
 		}
 	}
@@ -41,4 +49,15 @@ int main()
 	cvReleaseImage(&outputImage);
 
 	return 0;
+}
+
+static int compare(const void *arg1, const void *arg2)
+{
+	if (*(double*)arg1 > *(double*)arg2)
+		return 1;
+	else if (*(double*)arg1 < *(double*)arg2)
+		return -1;
+	else
+		return 0;
+
 }
