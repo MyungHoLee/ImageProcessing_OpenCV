@@ -6,8 +6,7 @@ int main()
 	int i, j, n, m;
 	CvScalar tempValue;
 
-	double filter[3][3] = { {1. / 18., 1. / 18.,1. / 18. },{ 1. / 18., 10. / 18., 1. / 18., },{ 1. / 18., 1. / 18., 1. / 18.} };
-
+	double filter[3][3] = { {-1. / 9.,-1. / 9., -1. / 9.}, { -1. / 9., 8. / 9.,-1. / 9. }, { -1. / 9., -1. / 9., -1. / 9.} };
 	IplImage *inputImage = cvLoadImage("lena.jpg", CV_LOAD_IMAGE_GRAYSCALE);
 	IplImage *tempImage = cvCreateImage(cvSize(inputImage->width + 2, inputImage->height + 2), 8, 1);
 	IplImage *outputImage = cvCreateImage(cvGetSize(inputImage), 8, 1);
