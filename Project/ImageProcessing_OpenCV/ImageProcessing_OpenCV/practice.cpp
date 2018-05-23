@@ -1,154 +1,341 @@
-#define _CRT_SECURE_NO_WARNINGS
-#include <stdio.h>
-
 #include <opencv/cv.h>
 #include <opencv/highgui.h>
 
-bool faceDetection(IplImage * image, CvRect * faceRect) {
+struct Complex {
+	double Re;
+	double lm;
+};
 
-	const char * faceClassifier = "haarcascade_frontalface_default.xml";
+Complex **FFT; // Pointer to save FFT result
+IplImage* FFT2d(IplImage* inputImage);
+void FFT1d(Complex *X, int N, int Log2N);
+void Scrambling(Complex *X, int N, int Log2N);
+void Butterfly(Complex *X, int N, int Log2N, int mode);
+int ReverseBitOrder(int index, int Log2N);
 
-	CvHaarClassifierCascade * cascade_face = 0;
-	cascade_face = (CvHaarClassifierCascade*)cvLoad(faceClassifier, 0, 0, 0);
-
-	if (!cascade_face) {
-		printf("error : face cascade error \n");
-		return false;
-	}
-
-	CvMemStorage * storage_face = 0;
-	storage_face = cvCreateMemStorage(0);
-
-	if (!storage_face) {
-		printf("error : storage error \n");
-		cvReleaseHaarClassifierCascade(&cascade_face);
-		return false;
-	}
-
-	CvSeq* faces = 0;
-	CvRect* tempR = 0;
-
-	faces = cvHaarDetectObjects(image, cascade_face, storage_face, 1.1, 3, CV_HAAR_FIND_BIGGEST_OBJECT);
-
-	if (!faces->total) {
-		cvReleaseMemStorage(&storage_face);
-		cvReleaseHaarClassifierCascade(&cascade_face);
-		return false;
-	}
-
-	tempR = (CvRect*)cvGetSeqElem(faces, 0);
-	faceRect->x = tempR->x;
-	faceRect->y = tempR->y;
-	faceRect->height = tempR->height;
-	faceRect->width = tempR->width;
-
-	cvReleaseHaarClassifierCascade(&cascade_face);
-	cvReleaseMemStorage(&storage_face);
-
-	return true;
-}
-
-bool eyeDetection(IplImage * faceImage, CvRect * leftEyeRect, CvRect * rightEyeRect) {
-
-	const char * leftEyeClassifier = "haarcascade_mcs_lefteye.xml";
-	const char * rightEyeClassifier = "haarcascade_mcs_righteye.xml";
-
-	CvHaarClassifierCascade * cascade_leftEye = 0;
-	cascade_leftEye = (CvHaarClassifierCascade*)cvLoad(leftEyeClassifier, 0, 0, 0);
-
-	CvHaarClassifierCascade * cascade_rightEye = 0;
-	cascade_rightEye = (CvHaarClassifierCascade*)cvLoad(rightEyeClassifier, 0, 0, 0);
-
-	if (!cascade_leftEye || !cascade_rightEye) {
-		printf("error : face cascade error \n");
-		return false;
-	}
-
-	CvMemStorage * storage_leftEye = 0;
-	storage_leftEye = cvCreateMemStorage(0);
-
-	CvMemStorage * storage_rightEye = 0;
-	storage_rightEye = cvCreateMemStorage(0);
-
-	if (!storage_leftEye || !storage_rightEye) {
-		printf("error : storage error \n");
-		cvReleaseHaarClassifierCascade(&cascade_leftEye);
-		cvReleaseHaarClassifierCascade(&cascade_rightEye);
-		return false;
-	}
-
-	CvSeq* leftEye = 0;
-	CvSeq* rightEye = 0;
-	CvRect* tempLEye = 0;
-	CvRect* tempREye = 0;
-
-	leftEye = cvHaarDetectObjects(faceImage, cascade_leftEye, storage_leftEye, 1.3, 3, CV_HAAR_FIND_BIGGEST_OBJECT);
-	rightEye = cvHaarDetectObjects(faceImage, cascade_rightEye, storage_rightEye, 1.3, 3, CV_HAAR_FIND_BIGGEST_OBJECT);
-
-	if (leftEye->total) {
-		tempLEye = (CvRect*)cvGetSeqElem(leftEye, 0);
-		leftEyeRect->x = tempLEye->x;
-		leftEyeRect->y = tempLEye->y;
-		leftEyeRect->height = tempLEye->height;
-		leftEyeRect->width = tempLEye->width;
-	}
-
-	if (rightEye->total) {
-		tempREye = (CvRect*)cvGetSeqElem(rightEye, 0);
-		rightEyeRect->x = tempREye->x;
-		rightEyeRect->y = tempREye->y;
-		rightEyeRect->height = tempREye->height;
-		rightEyeRect->width = tempREye->width;
-	}
-
-	// 검출된 왼쪽 눈들의 좌표를 이용하여 정확한 왼쪽 눈의 좌표를 구할 수 있도록 조건을 설정
-	for (int i = 1; i < leftEye->total; i++) {
-		tempLEye = (CvRect*)cvGetSeqElem(leftEye, i);
-	}
-
-	// 검출된 오른쪽 눈들의 좌표를 이용하여 정확한 오른쪽 눈의 좌표를 구할 수 있도록 조건을 설정
-	for (int i = 1; i < rightEye->total; i++) {
-		tempREye = (CvRect*)cvGetSeqElem(rightEye, i);
-	}
-
-	cvReleaseHaarClassifierCascade(&cascade_leftEye);
-	cvReleaseHaarClassifierCascade(&cascade_rightEye);
-	cvReleaseMemStorage(&storage_leftEye);
-	cvReleaseMemStorage(&storage_rightEye);
-
-	return true;
-}
+IplImage* RFFT2d(IplImage* FFTSpectrum);
+void RFFT1d(Complex *X, int N, int Log2N);
 
 int main()
 {
-	CvRect faceRect = { 0,0,0,0 }, leftEyeRect = { 0,0,0,0 }, rightEyeRect = { 0, 0, 0, 0 };
-	IplImage* img = cvLoadImage("원빈.jpg", 1);
-	
+	IplImage* inputImage = cvLoadImage("lena.jpg", CV_LOAD_IMAGE_GRAYSCALE);
+	IplImage* FFTSpectrum;
+	IplImage* RFFTImage;
+
+	FFTSpectrum = FFT2d(inputImage); // Fast Fourier Transform
+	RFFTImage = RFFT2d(FFTSpectrum); // Reverse 역방향 FFT
+
+	cvShowImage("Input Image", inputImage);
+	cvShowImage("FFT Spectrum", FFTSpectrum);
+	cvShowImage("RFFT Image", RFFTImage);
+
 	cvWaitKey();
-	faceDetection(img, &faceRect);
-	cvRectangle(img,
-		cvPoint(faceRect.x, faceRect.y),
-		cvPoint(faceRect.x + faceRect.width, faceRect.y + faceRect.height),
-		cvScalar(0, 255, 0), 3, CV_AA, 0);
-
-	eyeDetection(img, &leftEyeRect, &rightEyeRect);
-
-	//검출한 왼쪽 눈을 빨간색 사각형 영역으로 표현
-	cvRectangle(img,
-		cvPoint(leftEyeRect.x, leftEyeRect.y),
-		cvPoint(leftEyeRect.x + leftEyeRect.width, leftEyeRect.y + leftEyeRect.height),
-		cvScalar(0, 0, 255), 3, CV_AA, 0);
-
-	// 검출한 오른쪽 눈을 파란색 사각형 영역으로 표현
-	cvRectangle(img,
-		cvPoint(rightEyeRect.x, rightEyeRect.y),
-		cvPoint(rightEyeRect.x + rightEyeRect.width, rightEyeRect.y + rightEyeRect.height),
-		cvScalar(255, 0, 0), 3, CV_AA, 0);
-
-	cvShowImage("Detection Result", img);
-	cvWaitKey();
-	cvDestroyAllWindows();
-	cvReleaseImage(&img);
+	cvReleaseImage(&inputImage);
+	cvReleaseImage(&FFTSpectrum);
+	cvReleaseImage(&RFFTImage);
 
 	return 0;
+}
+
+IplImage* FFT2d(IplImage* inputImage) {
+	int i, j, row, col, Log2N, Num;
+	Complex * Data;
+	unsigned char **temp;
+	double Value, Absol;
+
+	CvScalar tempScalar;
+	
+	IplImage* FFTSpectrum = cvCreateImage(cvGetSize(inputImage), 8, 1);
+
+	Num = inputImage->width;
+	Log2N = 0;
+
+	while (Num >= 2) { // Image Width calculation 영상너비의 계산
+		Num >>= 1;
+		Log2N++;
+	}
+	IplImage* tempImage = cvCreateImage(cvGetSize(inputImage), 8, 1); // Assign storage location 
+
+	Data = new Complex [inputImage->width];
+
+	FFT = new Complex *[inputImage->height];
+	// Arrangement for storing frequency-domain transformed images
+	// 주파수 영역 변환 영상을 저장하기 위한 배열
+	temp = new unsigned char *[inputImage->height];
+
+	for (i = 0; i < inputImage->height; i++) {
+		FFT[i] = new Complex[inputImage->width];
+		temp[i] = new unsigned char[inputImage->width];
+	}
+
+	for (i = 0; i < inputImage->height; i++) {
+		for (j = 0; j < inputImage->width; j++) {
+			Data[j].Re = (double)inputImage->imageData[i*inputImage->widthStep + j];
+			// copy one row of input, the component value is the value of the image
+			// 입력한 한 행을 복사, 실수 성분 값은 영상의 값
+			Data[j].lm = 0.0; // 복소 성분 값은 0
+		}
+		FFT1d(Data, inputImage->width, Log2N); // 1D FFT 1차원 FFT
+		for (j = 0; j < inputImage->width; j++) { // save Results
+			FFT[i][j].Re = Data[j].Re;
+			FFT[j][j].lm = Data[j].lm;
+		}
+	}
+
+	Num = inputImage->height;
+	Log2N = 0;
+
+	while (Num >= 2) { // 영상의 높이 계산
+		Num >>= 1;
+		Log2N++;
+	}
+	
+	Data = new Complex[inputImage->height];
+
+	for (i = 0; i < inputImage->width; i++) {
+		for (j = 0; j < inputImage->height; j++) {
+			Data[j].Re = FFT[j][i].Re; // 영상의 한 열을 복사
+			Data[j].lm = FFT[j][i].lm;
+		}
+
+		FFT1d(Data, inputImage->height, Log2N); // 1차원 FFT
+
+		for (j = 0; j < inputImage->height; j++) { // save Results
+			FFT[j][i].Re = Data[j].Re;
+			FFT[j][i].lm = Data[j].lm;
+		}
+	}
+
+	for (i = 0; i < inputImage->height; i++) {
+		for (j = 0; j < inputImage->width; j++) {
+			Value = sqrt((FFT[i][j].Re * FFT[i][j].Re) + (FFT[i][j].lm * FFT[i][j].lm));
+			Absol = 20 * log(Value);
+
+			if (Absol > 225.0)
+				Absol = 225.0;
+			if (Absol < 0.0)
+				Absol = 0.0;
+
+			cvSet2D(tempImage, i, j, cvScalar(Absol));
+		}
+	}
+
+	//shuffling process 셔플링 과정
+	for (i = 0; i < inputImage->height; i += inputImage->height / 2) {
+		for (j = 0; j < inputImage->width; j += inputImage->width / 2) {
+			for (row = 0; row < inputImage->height / 2; row++) {
+				for (col = 0; col < inputImage->width / 2; col++) {
+					tempScalar = cvGet2D(tempImage, i + row, j + col);
+					temp[(inputImage->height / 2 - 1) - row + i][(inputImage->width / 2 - 1) - col + j] = (unsigned char)tempScalar.val[0];
+				}
+			}
+		}
+	}
+
+	for (i = 0; i < inputImage->height; i++) {
+		for (j = 0; j < inputImage->width; j++) {
+			cvSet2D(FFTSpectrum, i, j, cvScalar(temp[i][j]));
+		}
+	}
+	
+	delete[] Data, **temp;
+	cvReleaseImage(&tempImage);
+
+	return FFTSpectrum;
+}
+
+void FFT1d(Complex *X, int N, int Log2N) {
+	Scrambling(X, N, Log2N);
+	Butterfly(X, N, Log2N, 1);
+}
+
+void Scrambling(Complex *X, int N, int Log2N) {
+	int i;
+	Complex *temp;
+
+	temp = new Complex[N];
+
+	for (i = 0; i < N; i++) {
+		temp[i].Re = X[ReverseBitOrder(i, Log2N)].Re;
+		temp[i].lm = X[ReverseBitOrder(i, Log2N)].lm;
+	}
+
+	for (i = 0; i < N; i++) {
+		X[i].Re = temp[i].Re;
+		X[i].lm = temp[i].lm;
+	}
+	
+	delete[] temp;
+}
+
+void Butterfly(Complex *X, int N, int Log2N, int mode)
+{
+	int i, j, k, m;
+	int start;
+	double Value;
+	double PI = 3.14159265358979;
+
+	Complex *Y, temp;
+
+	Y = new Complex[N / 2];
+
+	for (i = 0; i < Log2N; i++) {
+		Value = pow(2., i + 1);
+
+		if (mode == 1) {
+			for (j = 0; j < (int)(Value / 2); j++) {
+				Y[j].Re = cos(j * 2.0 * PI / Value);
+				Y[j].lm = -sin(j * 2.0 * PI / Value);
+			}
+		}
+		if (mode == 2) {
+			for (j = 0; j < (int)(Value / 2); j++) {
+				Y[j].Re = cos(j*2.0*PI / Value);
+				Y[j].lm = sin(j * 2.0 * PI / Value);
+			}
+		}
+
+		start = 0;
+
+		for (k = 0; k < N / (int)Value; k++) {
+			for (j = start; j < start+(int)(Value / 2); j++) {
+				m = j + (int)(Value / 2);
+				temp.Re = Y[j - start].Re * X[m].Re - Y[j - start].lm * X[m].lm;
+				temp.lm = Y[j - start].lm * X[m].Re - Y[j - start].Re * X[m].lm;
+
+				X[m].Re = X[j].Re - temp.Re;
+				X[m].lm = X[j].lm - temp.lm;
+
+				X[j].Re = X[j].Re + temp.Re;
+				X[j].lm = X[j].lm + temp.lm;
+			}
+			start = start + (int)Value;
+		}
+	}
+	if (mode == 2) {
+		for (i = 0; i < N; i ++) {
+			X[i].Re = X[i].Re / N;
+			X[i].lm = X[i].lm / N;
+		}
+	}
+
+	delete[] Y;
+}
+
+int ReverseBitOrder(int index, int Log2N)
+{
+	int i, X, Y;
+
+	Y = 0;
+
+	for (i = 0; i < Log2N; i++) {
+		X = (index & (1 << i)) >> i;
+		Y = (Y << 1) | X;
+	}
+
+	return Y;
+}
+
+IplImage * RFFT2d(IplImage * FFTSpectrum)
+{
+	Complex **RFFT;
+
+	int i, j, Num, Log2N;
+	Complex  * Data;
+
+	IplImage * outputImage = cvCreateImage(cvGetSize(FFTSpectrum), 8, 1);
+
+	Num = FFTSpectrum->width;
+	Log2N = 0;
+	while (Num >= 2)
+	{
+		Num >>= 1;
+		Log2N++;
+	}
+
+	Data = new Complex[FFTSpectrum->height];
+	RFFT = new Complex *[FFTSpectrum->height];
+
+	for (i = 0; i < FFTSpectrum->height; i++)
+	{
+		RFFT[i] = new Complex[FFTSpectrum->width];
+	}
+
+	for (i = 0; i < FFTSpectrum->height; i++)
+	{
+		for (j = 0; j < FFTSpectrum->width; j++) {
+			Data[j].Re = FFT[i][j].Re;
+			Data[j].lm = FFT[i][j].lm;
+		}
+		RFFT1d(Data, FFTSpectrum->width, Log2N);
+
+		for (j = 0; j < FFTSpectrum->width; j++) {
+			RFFT[i][j].Re = Data[j].Re;
+			RFFT[i][j].lm = Data[j].lm;
+		}
+	}
+
+	Num = FFTSpectrum->height;
+	Log2N = 0;
+	while (Num >= 2)
+	{
+		Num >>= 1;
+		Log2N++;
+	}
+
+	Data = new Complex[FFTSpectrum->height];
+
+	for (i = 0; i < FFTSpectrum->width; i++) {
+		for (j = 0; j < FFTSpectrum->height; j++) {
+			Data[j].Re = RFFT[j][i].Re;
+			Data[j].lm = RFFT[j][i].lm;
+		}
+
+		RFFT1d(Data, FFTSpectrum->width, Log2N);
+
+		for (j = 0; j < FFTSpectrum->width; j++) {
+			RFFT[i][j].Re = Data[j].Re;
+			RFFT[i][j].lm = Data[j].lm;
+		}
+
+	}
+
+	Num = FFTSpectrum->height;
+	Log2N = 0;
+	while (Num >= 2)
+	{
+		Num >>= 1;
+		Log2N++;
+	}
+
+	Data = new Complex[FFTSpectrum->height];
+
+	for (i = 0; i < FFTSpectrum->width; i++) {
+		for (j = 0; j < FFTSpectrum->height; j++) {
+			Data[j].Re = RFFT[j][i].Re;
+			Data[j].lm = RFFT[j][i].lm;
+		}
+
+		RFFT1d(Data, FFTSpectrum->width, Log2N);
+
+		for (j = 0; j < FFTSpectrum->width; j++) {
+			RFFT[j][j].Re = Data[j].Re;
+			RFFT[j][i].lm = Data[j].lm;
+		}
+	}
+
+	for (i = 0; i < FFTSpectrum->width; i++) {
+		for (j = 0; j < FFTSpectrum->height; j++) {
+			cvSet2D(outputImage, i, j, cvScalar((unsigned char)RFFT[i][j].Re));
+		}
+	}
+
+	delete [] Data;
+
+	return outputImage;
+}
+
+void RFFT1d(Complex *X, int N, int Log2N) {
+	Scrambling(X, N, Log2N);
+	Butterfly(X, N, Log2N, 2);
 }
